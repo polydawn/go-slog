@@ -40,24 +40,30 @@ func New(proxy io.Writer, statFunc func(io.Writer)) *Slog {
 }
 
 func (slog *Slog) Write(msg []byte) (int, error) {
-	// back up.
+	slog.retract()             // bring the cursor back up
+	n, e := slog.wr.Write(msg) // write the message
+	slog.place()               // replace mls content
+	return n, e                // return stats from the parameter's write
+}
+
+func (slog *Slog) Refresh() {
+	slog.retract()
+	slog.place()
+}
+
+func (slog *Slog) retract() {
 	if slog.mls.footprint > 0 {
 		//all these ops should work even on window ANSI.SYS.
 		slog.wr.Write(LF)                                 // set cursor to beginning of line.
 		fmt.Fprint(slog.wr, CSI, slog.mls.footprint, "A") // jump cursor up.  should be supported even on windows.
 		fmt.Fprint(slog.wr, CSI, "J")                     // clear from cursor to end of screen.
 	}
+}
 
-	// write the message
-	n, e := slog.wr.Write(msg)
-
-	// replace mls content
+func (slog *Slog) place() {
 	wc := &linecountingWriter{wr: slog.wr}
 	slog.opine(wc)
 	slog.mls.footprint = wc.n
-
-	// return stats from the parameter's write
-	return n, e
 }
 
 type linecountingWriter struct {
