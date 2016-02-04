@@ -26,33 +26,33 @@ func (mls *multilineStatus) Render(wr io.Writer) {
 }
 
 func chill() {
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 }
 
 func main() {
 	mls := &multilineStatus{}
 	slog := slog.New(os.Stderr, mls.Render)
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 1\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 1 .\n")
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 2\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 2  .\n")
 	mls.lines = append(mls.lines, "]]] uno .")
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 3\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 3   .\n")
 	mls.lines = append(mls.lines, "]]] dos  .")
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 4\n")
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 5\n")
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 6\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 4    .\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 5     .\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 6    .\n")
 	chill()
 	mls.lines = append(mls.lines, "]]] tres  .")
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 7\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 7   .\n")
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 8\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 8  .\n")
 	chill()
 	mls.lines = mls.lines[0:1]
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 9\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 9 .\n")
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 0\n")
+	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 0.\n")
 	chill()
 }
