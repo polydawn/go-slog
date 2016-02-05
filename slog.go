@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	CSI = "\x1B["
+	_CSI = "\x1B["
 )
 
 var (
-	CR = []byte{0x0A}
-	LF = []byte{0x0D}
+	_CR = []byte{0x0A}
+	_LF = []byte{0x0D}
 )
 
 /*
@@ -94,9 +94,9 @@ func (slog *Slog) Drape() {
 func (slog *Slog) retract() {
 	if slog.mls.footprint > 0 {
 		//all these ops should work even on window ANSI.SYS.
-		slog.wr.Write(LF)                                 // set cursor to beginning of line.
-		fmt.Fprint(slog.wr, CSI, slog.mls.footprint, "A") // jump cursor up.  should be supported even on windows.
-		fmt.Fprint(slog.wr, CSI, "J")                     // clear from cursor to end of screen.
+		slog.wr.Write(_LF)                                 // set cursor to beginning of line.
+		fmt.Fprint(slog.wr, _CSI, slog.mls.footprint, "A") // jump cursor up.  should be supported even on windows.
+		fmt.Fprint(slog.wr, _CSI, "J")                     // clear from cursor to end of screen.
 	}
 }
 
@@ -112,6 +112,6 @@ type linecountingWriter struct {
 }
 
 func (lcw *linecountingWriter) Write(msg []byte) (int, error) {
-	lcw.n += bytes.Count(msg, CR)
+	lcw.n += bytes.Count(msg, _CR)
 	return lcw.wr.Write(msg)
 }
