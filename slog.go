@@ -51,6 +51,10 @@ func (slog *Slog) Refresh() {
 	slog.place()
 }
 
+func (slog *Slog) Drape() {
+	slog.mls.footprint = 0
+}
+
 func (slog *Slog) retract() {
 	if slog.mls.footprint > 0 {
 		//all these ops should work even on window ANSI.SYS.

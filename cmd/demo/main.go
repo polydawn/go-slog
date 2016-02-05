@@ -47,6 +47,7 @@ func main() {
 	chill()
 	mls.lines = append(mls.lines, "]]] tres  .")
 	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 7   .\n")
+	slog.Drape()
 	chill()
 	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 8  .\n")
 	chill()
