@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -15,50 +14,46 @@ const (
 	RESET = "m"
 )
 
-type multilineStatus struct {
-	lines []string
-}
-
-func (mls *multilineStatus) Render(wr io.Writer) {
-	for _, line := range mls.lines {
-		fmt.Fprint(wr, line, "\n")
-	}
-}
-
 func chill() {
 	time.Sleep(500 * time.Millisecond)
 }
 
 func main() {
-	mls := &multilineStatus{}
-	slog := slog.New(os.Stderr, mls.Render)
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 1 .\n")
+	mls := slog.Banner{}
+	slog, std := slog.New(os.Stderr)
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 1 .\n")
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 2  .\n")
-	mls.lines = append(mls.lines, "]]] uno .")
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 2  .\n")
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 3   .\n")
-	mls.lines = append(mls.lines, "]]] dos  .")
-	slog.Refresh()
+	mls.Lines = append(mls.Lines, "]]] uno .")
+	slog.SetBanner(mls)
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 4    .\n")
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 5     .\n")
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 6    .\n")
+	slog.SetBanner(mls)
 	chill()
-	mls.lines = append(mls.lines, "]]] tres  .")
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 7   .\n")
-	slog.Drape()
+	slog.SetBanner(mls)
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 8  .\n")
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 3   .\n")
 	chill()
+	mls.Lines = append(mls.Lines, "]]] dos  .")
+	slog.SetBanner(mls)
 	chill()
-	mls.lines = mls.lines[0:1]
-	slog.Refresh()
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 4    .\n")
 	chill()
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 5     .\n")
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 9 .\n")
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 6    .\n")
 	chill()
+	mls.Lines = append(mls.Lines, "]]] tres  .")
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 7   .\n")
+	//	slog.Drape()
 	chill()
-	fmt.Fprint(slog, CSI, CYAN, "asdf", CSI, RESET, "qwer 0.\n")
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 8  .\n")
+	chill()
+	mls.Lines = mls.Lines[0:1]
+	slog.SetBanner(mls)
+	chill()
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 9 .\n")
+	chill()
+	fmt.Fprint(std, CSI, CYAN, "asdf", CSI, RESET, "qwer 0.\n")
 	chill()
 }
