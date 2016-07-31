@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sync"
 )
 
 const (
@@ -11,107 +12,66 @@ const (
 )
 
 var (
-	_CR = []byte{0x0A}
-	_LF = []byte{0x0D}
+	_CR = []byte{'\r'}
+	_LF = []byte{'\n'}
 )
 
-/*
-	Fundamentally we don't really care about anything except backing up far enough
-	to overwrite our own previous footprint.  So here's what you remember for that.
-*/
-type multilineStatus struct {
-	footprint int
-}
-
-// Slog must be a writer so you can use it in place of `os.Stderr` in other code.
-var _ io.Writer = &Slog{}
-
 type Slog struct {
-	mls   multilineStatus
-	wr    io.Writer
-	opine func(io.Writer)
+	wr         io.Writer
+	footprint  int
+	bannerMemo []byte
+	mu         sync.Mutex
+	scwr       *scrollbackWriter
 }
 
-/*
-	Produce a new `Slog`.  All of the output will be written to the provided
-	`io.Writer` (often `os.Stderr` is a reasonable choice for this).  Every
-	time the status area needs to be updated, `statFunc` is called, and is
-	provided another writer to use.
-*/
-func New(proxy io.Writer, statFunc func(io.Writer)) *Slog {
-	return &Slog{
-		wr:    proxy,
-		opine: statFunc,
+func newSlog(wr io.Writer) *Slog {
+	s := &Slog{
+		wr: wr,
+	}
+	s.scwr = &scrollbackWriter{s}
+	return s
+}
+
+func (s *Slog) SetBanner(b Banner) {
+	// Ask the new thing to fmt itself all out.
+	var buf bytes.Buffer
+	b.WriteTo(&buf)
+	// Lock for the remainder.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Save the new state.
+	footprint := s.footprint
+	s.bannerMemo = buf.Bytes()
+	s.footprint = bytes.Count(s.bannerMemo, _LF)
+	// Render.
+	s.retract(footprint) // the previous one
+	io.Copy(s.wr, bytes.NewBuffer(s.bannerMemo))
+}
+
+func (s *Slog) retract(n int) {
+	if n > 0 {
+		//all these ops should work even on windows ANSI.SYS.
+		s.wr.Write(_CR)                // set cursor to beginning of line.
+		fmt.Fprint(s.wr, _CSI, n, "A") // jump cursor up.  should be supported even on windows.
+		fmt.Fprint(s.wr, _CSI, "J")    // clear from cursor to end of screen.
 	}
 }
 
-/*
-	Write a message to the scrollback -- it will appear just above the
-	updating status area.
-
-	This implements the `io.Writer` contract.  Proxy other loggers to this!
-	Then you get your choice of logging framework, AND the ability to do
-	interactively updating status info with Slog.
-*/
-func (slog *Slog) Write(msg []byte) (int, error) {
-	slog.retract()             // bring the cursor back up
-	n, e := slog.wr.Write(msg) // write the message
-	slog.place()               // replace mls content
-	return n, e                // return stats from the parameter's write
+// must be full lines or we will have a sad time
+func (s *Slog) write(msg []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.retract(s.footprint)
+	io.Copy(s.wr, bytes.NewBuffer(msg))
+	io.Copy(s.wr, bytes.NewBuffer(s.bannerMemo))
 }
 
-/*
-	Update the status area.
-
-	Calls the `statFunc` the Slog was initialized with, and the content it
-	produces will replace the current status area.
-
-	If you have a bunch of progress bars, they might all feed status events
-	into one list of progress info -- call this whenever the list is updated.
-	(You're free to do dedup of events or trigger this on a timer, whatever.)
-*/
-func (slog *Slog) Refresh() {
-	slog.retract()
-	slog.place()
+type scrollbackWriter struct {
+	s *Slog
 }
 
-/*
-	Set the current status area adrift in the scrollback.  It will no longer
-	be overwritten after you call `Drape()` -- as you continue to write
-	other logs, the draped status text will just drift up in the scrollback
-	like any other lines.  New status writes after `Drape` behave normally
-	(they'll still auto-replace themselves).
-
-	You might want to clear out your status text immediatley after calling
-	`Drape()`; otherwise you'll get the whole text duplicated in the scrollback,
-	and again below it as soon as you next call either `Refresh` or `Write`.
-	Of course, you might want that, so the choice is yours.
-*/
-func (slog *Slog) Drape() {
-	slog.mls.footprint = 0
-}
-
-func (slog *Slog) retract() {
-	if slog.mls.footprint > 0 {
-		//all these ops should work even on window ANSI.SYS.
-		slog.wr.Write(_LF)                                 // set cursor to beginning of line.
-		fmt.Fprint(slog.wr, _CSI, slog.mls.footprint, "A") // jump cursor up.  should be supported even on windows.
-		fmt.Fprint(slog.wr, _CSI, "J")                     // clear from cursor to end of screen.
-	}
-}
-
-func (slog *Slog) place() {
-	wc := &linecountingWriter{wr: slog.wr}
-	slog.opine(wc)
-	slog.mls.footprint = wc.n
-}
-
-type linecountingWriter struct {
-	n  int
-	wr io.Writer
-}
-
-func (lcw *linecountingWriter) Write(msg []byte) (int, error) {
-	lcw.n += bytes.Count(msg, _CR)
-	return lcw.wr.Write(msg)
+func (scwr *scrollbackWriter) Write(msg []byte) (int, error) {
+	last := bytes.LastIndexByte(msg, '\n') + 1
+	scwr.s.write(msg[0:last])
+	return last, nil
 }
