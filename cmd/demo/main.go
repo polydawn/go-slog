@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"polydawn.net/go-slog"
+	"go.polydawn.net/go-slog"
 )
 
 const (

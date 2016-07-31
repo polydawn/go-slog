@@ -3,7 +3,7 @@ set -euo pipefail
 
 ### Project details
 name="slog"
-pkg="polydawn.net/go-$name"
+pkg="go.polydawn.net/go-$name"
 cmd="$pkg/cmd/demo"
 
 
