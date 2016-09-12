@@ -21,12 +21,14 @@ type Slog struct {
 	footprint  int
 	bannerMemo []byte
 	mu         sync.Mutex
+	partial    *bytes.Buffer
 	scwr       *scrollbackWriter
 }
 
 func newSlog(wr io.Writer) *Slog {
 	s := &Slog{
-		wr: wr,
+		wr:      wr,
+		partial: &bytes.Buffer{},
 	}
 	s.scwr = &scrollbackWriter{s}
 	return s
@@ -61,9 +63,26 @@ func (s *Slog) retract(n int) {
 func (s *Slog) write(msg []byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// scan for the last (or any) cuts so we can decide what to do
+	lastBreak := bytes.LastIndexByte(msg, '\n') + 1
+	//	fmt.Printf("::> %q ; %d/%d <::\n", string(msg), lastBreak, len(msg))
+	if lastBreak <= 0 {
+		s.partial.Write(msg)
+		return
+	}
+	// roll back over our previous banner print
 	s.retract(s.footprint)
-	io.Copy(s.wr, bytes.NewBuffer(msg))
+	// if we have any buffered partial lines, flush that first
+	if s.partial.Len() > 0 {
+		io.Copy(s.wr, s.partial)
+		s.partial.Reset()
+	}
+	// now flush all other complete lines
+	io.Copy(s.wr, bytes.NewBuffer(msg[0:lastBreak]))
+	// and the banner again
 	io.Copy(s.wr, bytes.NewBuffer(s.bannerMemo))
+	// retain anything after lastbreak in the partial line buffer
+	s.partial.Write(msg[lastBreak:])
 }
 
 type scrollbackWriter struct {
@@ -71,7 +90,6 @@ type scrollbackWriter struct {
 }
 
 func (scwr *scrollbackWriter) Write(msg []byte) (int, error) {
-	last := bytes.LastIndexByte(msg, '\n') + 1
-	scwr.s.write(msg[0:last])
-	return last, nil
+	scwr.s.write(msg)
+	return len(msg), nil
 }
