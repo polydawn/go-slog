@@ -42,21 +42,24 @@ func (s *Slog) SetBanner(b Banner) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	// Save the new state.
-	footprint := s.footprint
 	s.bannerMemo = buf.Bytes()
 	s.footprint = bytes.Count(s.bannerMemo, _LF)
 	// Render.
-	s.retract(footprint) // the previous one
+	s.clearDown() // the previous one
 	io.Copy(s.wr, bytes.NewBuffer(s.bannerMemo))
+	s.jumpUp(s.footprint)
 }
 
-func (s *Slog) retract(n int) {
+func (s *Slog) jumpUp(n int) {
 	if n > 0 {
 		//all these ops should work even on windows ANSI.SYS.
 		s.wr.Write(_CR)                // set cursor to beginning of line.
 		fmt.Fprint(s.wr, _CSI, n, "A") // jump cursor up.  should be supported even on windows.
-		fmt.Fprint(s.wr, _CSI, "J")    // clear from cursor to end of screen.
 	}
+}
+
+func (s *Slog) clearDown() {
+	fmt.Fprint(s.wr, _CSI, "J") // clear from cursor to end of screen.
 }
 
 // must be full lines or we will have a sad time
@@ -70,8 +73,8 @@ func (s *Slog) write(msg []byte) {
 		s.partial.Write(msg)
 		return
 	}
-	// roll back over our previous banner print
-	s.retract(s.footprint)
+	// clear down, obliterating our previous banner print
+	s.clearDown()
 	// if we have any buffered partial lines, flush that first
 	if s.partial.Len() > 0 {
 		io.Copy(s.wr, s.partial)
@@ -83,6 +86,9 @@ func (s *Slog) write(msg []byte) {
 	io.Copy(s.wr, bytes.NewBuffer(s.bannerMemo))
 	// retain anything after lastbreak in the partial line buffer
 	s.partial.Write(msg[lastBreak:])
+	// jump the cursor back up (so that even if there's out-of-control writers to the
+	//  tty, they'll stomp our banner (which can reappear), rather than us making them disappear).
+	s.jumpUp(s.footprint)
 }
 
 type scrollbackWriter struct {
